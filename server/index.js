@@ -4,6 +4,7 @@ import express from 'express';
 import morgan from 'morgan';
 import { connectDB } from './config/db.js';
 import authRoutes from './routes/auth.js';
+import categoryRoutes from './routes/categories.js';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use(morgan('dev'));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/categories', categoryRoutes);
 
 app.get('/', (_req, res) => {
   res.json({ message: 'Budget Tracker API', health: '/api/health' });
