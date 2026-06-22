@@ -2,6 +2,7 @@ import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
 import morgan from 'morgan';
+import { connectDB } from './config/db.js';
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -19,11 +20,16 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  if (MONGODB_URI) {
-    console.log('MONGODB_URI configured');
-  } else {
-    console.warn('MONGODB_URI not set — database connection added in Step 3');
+async function startServer() {
+  try {
+    await connectDB(MONGODB_URI);
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error(`Failed to start server: ${error.message}`);
+    process.exit(1);
   }
-});
+}
+
+startServer();
