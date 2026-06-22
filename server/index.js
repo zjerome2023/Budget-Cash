@@ -3,6 +3,8 @@ import cors from 'cors';
 import express from 'express';
 import morgan from 'morgan';
 import { connectDB } from './config/db.js';
+import { errorHandler } from './middleware/errorHandler.js';
+import { notFound } from './middleware/notFound.js';
 import authRoutes from './routes/auth.js';
 import categoryRoutes from './routes/categories.js';
 import transactionRoutes from './routes/transactions.js';
@@ -28,6 +30,9 @@ app.get('/', (_req, res) => {
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
+
+app.use(notFound);
+app.use(errorHandler);
 
 async function startServer() {
   try {

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { body, param, query, validationResult } from 'express-validator';
+import { body, param, query } from 'express-validator';
 import {
   createTransaction,
   deleteTransaction,
@@ -7,17 +7,11 @@ import {
   listTransactions,
   updateTransaction,
 } from '../controllers/transactionController.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 import { authenticate } from '../middleware/authenticate.js';
+import { handleValidation } from '../middleware/validate.js';
 
 const router = Router();
-
-function handleValidation(req, res, next) {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-  next();
-}
 
 const idValidation = [
   param('id').isMongoId().withMessage('Valid transaction id is required'),
@@ -51,7 +45,6 @@ const transactionBodyValidation = [
     .isLength({ max: 500 })
     .withMessage('Description must be at most 500 characters'),
   body('date')
-    .optional()
     .isISO8601()
     .withMessage('Date must be a valid ISO date'),
 ];
@@ -79,10 +72,10 @@ const updateValidation = [
 
 router.use(authenticate);
 
-router.get('/', listQueryValidation, handleValidation, listTransactions);
-router.get('/:id', idValidation, handleValidation, getTransaction);
-router.post('/', transactionBodyValidation, handleValidation, createTransaction);
-router.put('/:id', updateValidation, handleValidation, updateTransaction);
-router.delete('/:id', idValidation, handleValidation, deleteTransaction);
+router.get('/', listQueryValidation, handleValidation, asyncHandler(listTransactions));
+router.get('/:id', idValidation, handleValidation, asyncHandler(getTransaction));
+router.post('/', transactionBodyValidation, handleValidation, asyncHandler(createTransaction));
+router.put('/:id', updateValidation, handleValidation, asyncHandler(updateTransaction));
+router.delete('/:id', idValidation, handleValidation, asyncHandler(deleteTransaction));
 
 export default router;

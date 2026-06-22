@@ -1,21 +1,15 @@
 import { Router } from 'express';
-import { query, validationResult } from 'express-validator';
+import { query } from 'express-validator';
 import {
   getByCategory,
   getOverTime,
   getSummary,
 } from '../controllers/analyticsController.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 import { authenticate } from '../middleware/authenticate.js';
+import { handleValidation } from '../middleware/validate.js';
 
 const router = Router();
-
-function handleValidation(req, res, next) {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-  next();
-}
 
 const dateRangeValidation = [
   query('startDate')
@@ -38,8 +32,8 @@ const overTimeValidation = [
 
 router.use(authenticate);
 
-router.get('/summary', dateRangeValidation, handleValidation, getSummary);
-router.get('/by-category', dateRangeValidation, handleValidation, getByCategory);
-router.get('/over-time', overTimeValidation, handleValidation, getOverTime);
+router.get('/summary', dateRangeValidation, handleValidation, asyncHandler(getSummary));
+router.get('/by-category', dateRangeValidation, handleValidation, asyncHandler(getByCategory));
+router.get('/over-time', overTimeValidation, handleValidation, asyncHandler(getOverTime));
 
 export default router;

@@ -1,6 +1,9 @@
 import axios from 'axios';
+import { getErrorMessage } from '../utils/errors';
 
 const TOKEN_KEY = 'budget_tracker_token';
+
+let onApiError = null;
 
 // Base URL from VITE_API_URL. The Express API enables CORS for local development.
 const api = axios.create({
@@ -15,6 +18,20 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (!error.response && onApiError) {
+      onApiError(getErrorMessage(error, 'Unable to reach the server'));
+    }
+    return Promise.reject(error);
+  }
+);
+
+export function setApiErrorHandler(handler) {
+  onApiError = handler;
+}
 
 export function getAuthToken() {
   return localStorage.getItem(TOKEN_KEY);

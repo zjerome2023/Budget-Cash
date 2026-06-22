@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import { getErrorMessage } from '../utils/auth';
+import { getErrorMessage } from '../utils/errors';
 import { DATE_RANGES, getDateRangeParams } from '../utils/dateRange';
 
 async function fetchDashboardData(dateRange) {

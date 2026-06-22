@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import CategoryManager from '../components/CategoryManager';
 import DateRangeFilter from '../components/DateRangeFilter';
+import ErrorAlert from '../components/ErrorAlert';
 import ExpenseForm from '../components/ExpenseForm';
 import SpendingByCategoryChart from '../components/SpendingByCategoryChart';
 import SpendingOverTimeChart from '../components/SpendingOverTimeChart';
@@ -8,11 +9,14 @@ import SummaryCards from '../components/SummaryCards';
 import TransactionList from '../components/TransactionList';
 import { useAuth } from '../hooks/useAuth';
 import { useDashboardData } from '../hooks/useDashboardData';
+import { useToast } from '../hooks/useToast';
 import api from '../services/api';
 import { DATE_RANGES } from '../utils/dateRange';
+import { getErrorMessage } from '../utils/errors';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [dateRange, setDateRange] = useState(DATE_RANGES.MONTH);
   const {
     categories,
@@ -26,33 +30,69 @@ export default function Dashboard() {
   } = useDashboardData(dateRange);
 
   async function handleCreateExpense(data) {
-    await api.post('/transactions', data);
-    await refresh();
+    try {
+      await api.post('/transactions', data);
+      await refresh();
+      showToast('Expense added', 'success');
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to add expense'), 'error');
+      throw err;
+    }
   }
 
   async function handleUpdateTransaction(id, data) {
-    await api.put(`/transactions/${id}`, data);
-    await refresh();
+    try {
+      await api.put(`/transactions/${id}`, data);
+      await refresh();
+      showToast('Expense updated', 'success');
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to update expense'), 'error');
+      throw err;
+    }
   }
 
   async function handleDeleteTransaction(id) {
-    await api.delete(`/transactions/${id}`);
-    await refresh();
+    try {
+      await api.delete(`/transactions/${id}`);
+      await refresh();
+      showToast('Expense deleted', 'success');
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to delete expense'), 'error');
+      throw err;
+    }
   }
 
   async function handleCreateCategory(data) {
-    await api.post('/categories', data);
-    await refresh();
+    try {
+      await api.post('/categories', data);
+      await refresh();
+      showToast('Category added', 'success');
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to create category'), 'error');
+      throw err;
+    }
   }
 
   async function handleUpdateCategory(id, data) {
-    await api.put(`/categories/${id}`, data);
-    await refresh();
+    try {
+      await api.put(`/categories/${id}`, data);
+      await refresh();
+      showToast('Category updated', 'success');
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to update category'), 'error');
+      throw err;
+    }
   }
 
   async function handleDeleteCategory(id) {
-    await api.delete(`/categories/${id}`);
-    await refresh();
+    try {
+      await api.delete(`/categories/${id}`);
+      await refresh();
+      showToast('Category deleted', 'success');
+    } catch (err) {
+      showToast(getErrorMessage(err, 'Failed to delete category'), 'error');
+      throw err;
+    }
   }
 
   return (
@@ -71,11 +111,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
+      {error && <ErrorAlert message={error} />}
 
       <SummaryCards summary={summary} loading={loading} />
 

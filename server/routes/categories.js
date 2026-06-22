@@ -1,29 +1,28 @@
 import { Router } from 'express';
-import { body, param, validationResult } from 'express-validator';
+import { body, param } from 'express-validator';
 import {
   createCategory,
   deleteCategory,
   listCategories,
   updateCategory,
 } from '../controllers/categoryController.js';
+import { asyncHandler } from '../middleware/asyncHandler.js';
 import { authenticate } from '../middleware/authenticate.js';
+import { handleValidation } from '../middleware/validate.js';
 
 const router = Router();
-
-function handleValidation(req, res, next) {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-  next();
-}
 
 const idValidation = [
   param('id').isMongoId().withMessage('Valid category id is required'),
 ];
 
 const createValidation = [
-  body('name').trim().notEmpty().withMessage('Name is required'),
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Name is required')
+    .isLength({ max: 100 })
+    .withMessage('Name must be at most 100 characters'),
   body('color')
     .optional()
     .matches(/^#[0-9A-Fa-f]{6}$/)
@@ -32,7 +31,12 @@ const createValidation = [
 
 const updateValidation = [
   ...idValidation,
-  body('name').trim().notEmpty().withMessage('Name is required'),
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Name is required')
+    .isLength({ max: 100 })
+    .withMessage('Name must be at most 100 characters'),
   body('color')
     .optional()
     .matches(/^#[0-9A-Fa-f]{6}$/)
@@ -41,9 +45,9 @@ const updateValidation = [
 
 router.use(authenticate);
 
-router.get('/', listCategories);
-router.post('/', createValidation, handleValidation, createCategory);
-router.put('/:id', updateValidation, handleValidation, updateCategory);
-router.delete('/:id', idValidation, handleValidation, deleteCategory);
+router.get('/', asyncHandler(listCategories));
+router.post('/', createValidation, handleValidation, asyncHandler(createCategory));
+router.put('/:id', updateValidation, handleValidation, asyncHandler(updateCategory));
+router.delete('/:id', idValidation, handleValidation, asyncHandler(deleteCategory));
 
 export default router;
