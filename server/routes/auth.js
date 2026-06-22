@@ -1,8 +1,22 @@
 import { Router } from 'express';
 import { body, validationResult } from 'express-validator';
-import { register } from '../controllers/authController.js';
+import {
+  getMe,
+  login,
+  logout,
+  register,
+} from '../controllers/authController.js';
+import { authenticate } from '../middleware/authenticate.js';
 
 const router = Router();
+
+function handleValidation(req, res, next) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  next();
+}
 
 const registerValidation = [
   body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
@@ -12,12 +26,14 @@ const registerValidation = [
   body('name').trim().notEmpty().withMessage('Name is required'),
 ];
 
-router.post('/register', registerValidation, (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
-  }
-  return register(req, res);
-});
+const loginValidation = [
+  body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+  body('password').notEmpty().withMessage('Password is required'),
+];
+
+router.post('/register', registerValidation, handleValidation, register);
+router.post('/login', loginValidation, handleValidation, login);
+router.get('/me', authenticate, getMe);
+router.post('/logout', authenticate, logout);
 
 export default router;
