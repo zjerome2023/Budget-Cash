@@ -1,5 +1,6 @@
 import Category from '../models/Category.js';
 import Transaction from '../models/Transaction.js';
+import { parseExpenseDate } from '../utils/dates.js';
 
 async function findOwnedCategory(userId, categoryId) {
   return Category.findOne({ _id: categoryId, userId });
@@ -72,7 +73,7 @@ export async function createTransaction(req, res) {
       categoryId,
       amount,
       description,
-      date,
+      date: parseExpenseDate(date),
     });
 
     await transaction.populate('categoryId', 'name color');
@@ -94,9 +95,14 @@ export async function updateTransaction(req, res) {
       }
     }
 
+    const updates = { categoryId, amount, description };
+    if (date !== undefined) {
+      updates.date = parseExpenseDate(date);
+    }
+
     const transaction = await Transaction.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id },
-      { categoryId, amount, description, date },
+      updates,
       { new: true, runValidators: true }
     ).populate('categoryId', 'name color');
 
