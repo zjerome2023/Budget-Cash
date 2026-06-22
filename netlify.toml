@@ -1,0 +1,12 @@
+# Netlify configuration for the React client (Vite).
+# Set VITE_API_URL in Netlify site settings or GitHub Actions secrets.
+
+[build]
+  base = "client"
+  command = "npm run build"
+  publish = "dist"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

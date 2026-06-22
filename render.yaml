@@ -1,0 +1,25 @@
+# Render blueprint for the Express API.
+# Connect this repo in Render and set secret env vars in the dashboard:
+# MONGODB_URI, JWT_SECRET, CLIENT_URL (production frontend URL).
+
+services:
+  - type: web
+    name: budget-tracker-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLIENT_URL
+        sync: false
