@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { getErrorMessage } from '../utils/auth';
 import { formatCurrency, formatDate, toDateInputValue } from '../utils/format';
 
@@ -218,14 +218,9 @@ export default function TransactionList({
   const [editingTransaction, setEditingTransaction] = useState(null);
   const [deletingTransaction, setDeletingTransaction] = useState(null);
 
-  useEffect(() => {
-    if (editingTransaction) {
-      const stillExists = transactions.some((tx) => tx._id === editingTransaction._id);
-      if (!stillExists) {
-        setEditingTransaction(null);
-      }
-    }
-  }, [transactions, editingTransaction]);
+  const activeEditTransaction = editingTransaction
+    ? transactions.find((tx) => tx._id === editingTransaction._id)
+    : null;
 
   if (loading) {
     return (
@@ -305,9 +300,9 @@ export default function TransactionList({
         </div>
       )}
 
-      {editingTransaction && (
+      {activeEditTransaction && (
         <EditTransactionModal
-          transaction={editingTransaction}
+          transaction={activeEditTransaction}
           categories={categories}
           onClose={() => setEditingTransaction(null)}
           onSave={onUpdate}

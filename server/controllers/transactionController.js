@@ -1,6 +1,6 @@
 import Category from '../models/Category.js';
 import Transaction from '../models/Transaction.js';
-import { parseExpenseDate } from '../utils/dates.js';
+import { buildDateRangeBounds, parseExpenseDate } from '../utils/dates.js';
 
 async function findOwnedCategory(userId, categoryId) {
   return Category.findOne({ _id: categoryId, userId });
@@ -13,16 +13,9 @@ function buildListFilter(userId, query) {
     filter.categoryId = query.categoryId;
   }
 
-  if (query.startDate || query.endDate) {
-    filter.date = {};
-    if (query.startDate) {
-      filter.date.$gte = new Date(query.startDate);
-    }
-    if (query.endDate) {
-      const end = new Date(query.endDate);
-      end.setHours(23, 59, 59, 999);
-      filter.date.$lte = end;
-    }
+  const dateBounds = buildDateRangeBounds(query);
+  if (dateBounds) {
+    filter.date = dateBounds;
   }
 
   return filter;

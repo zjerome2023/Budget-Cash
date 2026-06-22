@@ -1,18 +1,12 @@
 import mongoose from 'mongoose';
+import { buildDateRangeBounds } from './dates.js';
 
 export function buildDateMatch(userId, query) {
   const match = { userId: new mongoose.Types.ObjectId(userId) };
 
-  if (query.startDate || query.endDate) {
-    match.date = {};
-    if (query.startDate) {
-      match.date.$gte = new Date(query.startDate);
-    }
-    if (query.endDate) {
-      const end = new Date(query.endDate);
-      end.setHours(23, 59, 59, 999);
-      match.date.$lte = end;
-    }
+  const dateBounds = buildDateRangeBounds(query);
+  if (dateBounds) {
+    match.date = dateBounds;
   }
 
   return match;
