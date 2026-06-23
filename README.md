@@ -4,6 +4,8 @@ A full-stack expense tracking web app that helps you log daily spending, organiz
 
 **Live demo:** [https://budgetcash.netlify.app](https://budgetcash.netlify.app)
 
+Deployment verified — see [docs/VERIFICATION.md](docs/VERIFICATION.md) for smoke-test checklist and results.
+
 ---
 
 ## Problem and solution
@@ -196,6 +198,7 @@ week2-zjerome2023/
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, request and auth flows |
 | [docs/USAGE.md](docs/USAGE.md) | User guide: register, CRUD, charts |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Atlas, Render, Netlify, CI/CD deploy flow |
+| [docs/VERIFICATION.md](docs/VERIFICATION.md) | Deployment smoke-test checklist and results |
 
 ## CI/CD
 

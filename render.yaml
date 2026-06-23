@@ -24,3 +24,4 @@ services:
         sync: false
       - key: CLIENT_URL
         sync: false
+        # Set in Render dashboard to: https://budgetcash.netlify.app

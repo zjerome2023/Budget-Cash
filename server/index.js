@@ -14,10 +14,19 @@ const app = express();
 const PORT = process.env.PORT || 5001;
 const MONGODB_URI = process.env.MONGODB_URI;
 const CLIENT_URL = process.env.CLIENT_URL;
+const allowedOrigin = CLIENT_URL?.replace(/\/$/, '');
 
 app.use(
   cors({
-    origin: CLIENT_URL || true,
+    origin(origin, callback) {
+      if (!origin || !allowedOrigin) {
+        return callback(null, true);
+      }
+      if (origin.replace(/\/$/, '') === allowedOrigin) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   })
 );
