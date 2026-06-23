@@ -1,7 +1,7 @@
 # CI/CD for Budget Tracker
 #
 # Required GitHub repository secrets (Settings → Secrets and variables → Actions):
-#   VITE_API_URL            — Production API base URL (e.g. https://your-api.onrender.com/api)
+#   VITE_API_URL            — Production API base URL (e.g. https://budget-tracker-api-70sh.onrender.com/api)
 #   NETLIFY_AUTH_TOKEN      — Netlify personal access token
 #   NETLIFY_SITE_ID         — Netlify site ID
 #   RENDER_DEPLOY_HOOK_URL  — Optional Render deploy hook to redeploy API after main push

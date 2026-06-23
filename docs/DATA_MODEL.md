@@ -1,6 +1,6 @@
 # Budget Tracker — Data Model
 
-This document defines the MongoDB collections, relationships, indexes, and design decisions for the Budget Tracker application. It is the source of truth for schema design before Mongoose models are implemented in Step 4–7.
+This document defines the MongoDB collections, relationships, indexes, and design decisions for the Budget Tracker application. It matches the implemented Mongoose models in `server/models/`.
 
 ## Overview
 
@@ -68,7 +68,7 @@ Stores authentication identity and display profile. Passwords are hashed with bc
 |-------------|----------|----------|---------------------|
 | `_id`       | ObjectId | auto     | Primary key |
 | `email`     | String   | yes      | Unique, lowercase-trimmed, validated format |
-| `password`  | String   | yes      | bcrypt hash only; min length enforced at registration |
+| `password`  | String   | yes      | bcrypt hash only; min length 8 (enforced in schema and registration validation) |
 | `name`      | String   | yes      | Display name shown in dashboard header |
 | `createdAt` | Date     | auto     | Mongoose `timestamps` |
 | `updatedAt` | Date     | auto     | Mongoose `timestamps` |
@@ -90,7 +90,7 @@ Per-user spending categories. Default categories (e.g. Food, Transport) may be s
 | `_id`       | ObjectId | auto     | Primary key |
 | `userId`    | ObjectId | yes      | Ref `users._id`; scopes all category queries |
 | `name`      | String   | yes      | Trimmed; unique per user |
-| `color`     | String   | no       | Hex color (e.g. `#3B82F6`) for chart segments |
+| `color`     | String   | no       | Hex color (e.g. `#3B82F6`) for chart segments; default `#6B7280` |
 | `createdAt` | Date     | auto     | Mongoose `timestamps` |
 | `updatedAt` | Date     | auto     | Mongoose `timestamps` |
 
@@ -104,7 +104,7 @@ Per-user spending categories. Default categories (e.g. Food, Transport) may be s
 **Constraints**
 
 - API must verify `category.userId === req.user.id` before update or delete.
-- On category delete: either block if transactions exist, reassign transactions, or cascade-delete — MVP will block delete when transactions reference the category (return 409).
+- Category delete removes the document when owned by the user; transactions referencing a deleted category should be updated or deleted separately (no cascade in MVP).
 
 ---
 
@@ -117,9 +117,9 @@ Individual expense records. Amounts represent positive spending values (no incom
 | `_id`        | ObjectId | auto     | Primary key |
 | `userId`     | ObjectId | yes      | Ref `users._id`; scopes all transaction queries |
 | `categoryId` | ObjectId | yes      | Ref `categories._id`; must belong to same user |
-| `amount`     | Number   | yes      | Positive number; stored as decimal (e.g. `12.34`) |
-| `description`| String   | no       | Optional memo; max length enforced in validation |
-| `date`       | Date     | yes      | When the expense occurred; defaults to today |
+| `amount`     | Number   | yes      | Positive number; minimum `0.01` (schema `min`) |
+| `description`| String   | no       | Optional memo; max 500 characters; default `''` |
+| `date`       | Date     | yes      | When the expense occurred; defaults to today at midnight |
 | `createdAt`  | Date     | auto     | When the record was created in the system |
 | `updatedAt`  | Date     | auto     | Mongoose `timestamps` |
 
@@ -215,9 +215,20 @@ Anonymous requests to protected routes return **401 Unauthorized**. Cross-user a
 
 ---
 
-## Verify Checklist (Step 1)
+## Implementation reference
+
+Mongoose model files and key constraints:
+
+| Model | File | Notable schema rules |
+|-------|------|----------------------|
+| User | `server/models/User.js` | `email` unique/lowercase; `password` min 8; bcrypt pre-save hook; `toJSON` omits password |
+| Category | `server/models/Category.js` | Compound unique index `{ userId, name }`; `color` default `#6B7280` |
+| Transaction | `server/models/Transaction.js` | `amount` min `0.01`; `description` maxlength 500; indexes on `{ userId, date }` and `{ userId, categoryId }` |
+
+## Verify Checklist
 
 - [x] ERD shows relationships between User, Category, and Transaction
 - [x] Each collection has field types, constraints, and indexes documented
 - [x] Design decisions table explains *why*, not just *what*
 - [x] Read/write scope documented: all queries filtered by `userId`
+- [x] ERD and field tables match implemented Mongoose models
