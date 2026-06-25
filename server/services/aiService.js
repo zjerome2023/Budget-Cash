@@ -15,8 +15,12 @@ function getApiKey() {
   return key;
 }
 
+export function isGeminiConfigured() {
+  return Boolean(getApiKey());
+}
+
 export function ensureGeminiConfigured() {
-  if (!getApiKey()) {
+  if (!isGeminiConfigured()) {
     throw new AiConfigError();
   }
 }
