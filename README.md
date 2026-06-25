@@ -4,6 +4,8 @@ A full-stack expense tracking web app that helps you log daily spending, organiz
 
 **Live demo:** [https://budgetcash.netlify.app](https://budgetcash.netlify.app)
 
+**Youtube Demo Link:** [https://youtu.be/p4nDjpiis7s](https://youtu.be/p4nDjpiis7s)
+
 Deployment verified — see [docs/VERIFICATION.md](docs/VERIFICATION.md) for smoke-test checklist and results.
 
 ---
@@ -19,23 +21,6 @@ Tracking everyday expenses in a spreadsheet or notes app makes it hard to see pa
 - Filter data by date range (this week, this month, or all time)
 
 All data is scoped to the logged-in user. Anonymous users cannot create or modify records.
-
-## Screenshots
-
-Save captures to `docs/screenshots/` after running locally. Suggested filenames:
-
-| File | What to capture |
-|------|-----------------|
-| `dashboard.png` | Dashboard with summary cards, charts, expense form, and transaction list |
-| `login.png` | Login page with validation |
-| `register.png` | Registration form |
-| `categories.png` | Category manager with name and color |
-
-Example embed once images exist:
-
-```markdown
-![Dashboard](docs/screenshots/dashboard.png)
-```
 
 ## Tech stack
 
