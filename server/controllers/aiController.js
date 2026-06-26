@@ -1,7 +1,15 @@
 import Category from '../models/Category.js';
-import { callGemini, ensureGeminiConfigured, isGeminiConfigured } from '../services/aiService.js';
-import { buildCategorySuggestionPrompt } from '../utils/aiPrompts.js';
+import {
+  callGemini,
+  ensureGeminiConfigured,
+  isGeminiConfigured,
+} from '../services/aiService.js';
+import { fetchAnalyticsBundle } from '../utils/analyticsQueries.js';
+import { buildCompactAnalyticsPayload } from '../utils/analyticsPayload.js';
+import { buildCategorySuggestionPrompt, buildSpendingInsightsPrompt } from '../utils/aiPrompts.js';
+import { AiServiceError } from '../utils/aiErrors.js';
 import { suggestCategoryByKeywords } from '../utils/categoryKeywords.js';
+import { getCachedInsights, setCachedInsights } from '../utils/insightsCache.js';
 
 const VALID_CONFIDENCE = new Set(['high', 'medium', 'low']);
 
@@ -60,8 +68,64 @@ export async function suggestCategory(req, res) {
 }
 
 export async function spendingInsights(req, res) {
+  const { startDate, endDate, dateRangeLabel, forceRefresh = false } = req.body;
+  const userId = req.user._id;
+  const query = { startDate, endDate };
+
+  const { summary, byCategory, overTime } = await fetchAnalyticsBundle(userId, query);
+
+  if (summary.transactionCount === 0) {
+    return res.json({
+      insights: null,
+      message: 'No transactions in this period. Add expenses to generate insights.',
+    });
+  }
+
+  if (!forceRefresh) {
+    const cached = getCachedInsights(userId, startDate, endDate);
+    if (cached) {
+      return res.json({
+        insights: {
+          ...cached,
+          cached: true,
+        },
+      });
+    }
+  }
+
   ensureGeminiConfigured();
 
-  // Stub — full implementation in Step 24
-  res.json({ insights: null, message: 'Spending insights not yet implemented' });
+  const payload = buildCompactAnalyticsPayload(
+    summary,
+    byCategory,
+    overTime,
+    dateRangeLabel
+  );
+  const prompt = buildSpendingInsightsPrompt(JSON.stringify(payload));
+  const result = await callGemini(prompt);
+
+  const bullets = Array.isArray(result?.bullets)
+    ? result.bullets.filter((bullet) => typeof bullet === 'string' && bullet.trim())
+    : [];
+  const tip = typeof result?.tip === 'string' ? result.tip.trim() : '';
+
+  if (bullets.length === 0 && !tip) {
+    throw new AiServiceError();
+  }
+
+  const generatedAt = new Date().toISOString();
+  const insights = {
+    bullets,
+    tip,
+    generatedAt,
+    cached: false,
+  };
+
+  setCachedInsights(userId, startDate, endDate, {
+    bullets,
+    tip,
+    generatedAt,
+  });
+
+  res.json({ insights });
 }
