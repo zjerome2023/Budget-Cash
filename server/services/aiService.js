@@ -49,7 +49,7 @@ function sleep(ms) {
 export async function callGemini(prompt, { json = true } = {}) {
   ensureGeminiConfigured();
 
-  const modelName = process.env.AI_MODEL || 'gemini-2.0-flash';
+  const modelName = process.env.AI_MODEL || 'gemini-2.5-flash';
   const generationConfig = json ? { responseMimeType: 'application/json' } : {};
   const model = getClient().getGenerativeModel({ model: modelName, generationConfig });
 

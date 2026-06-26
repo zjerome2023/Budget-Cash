@@ -48,8 +48,8 @@ Optional for deployment: Netlify account, Render account, GitHub repository secr
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/FAU-AI-HootCamp-Summer-2026/week2-zjerome2023.git
-cd week2-zjerome2023
+git clone https://github.com/FAU-AI-HootCamp-Summer-2026/week3-zjerome2023.git
+cd week3-zjerome2023
 ```
 
 ### 2. Configure environment variables
@@ -106,6 +106,15 @@ curl http://localhost:5001/api/health
 ```
 
 Open the client, register a new account, and add an expense on the dashboard.
+
+### 6. Run API tests
+
+```bash
+cd server
+npm test
+```
+
+See [docs/API_TESTING.md](docs/API_TESTING.md) for automated and manual test cases. Import [docs/postman/Budget-Tracker.postman_collection.json](docs/postman/Budget-Tracker.postman_collection.json) into Postman or Thunder Client.
 
 ## Environment variables
 
@@ -203,7 +212,7 @@ All protected routes require `Authorization: Bearer <token>` (or httpOnly `token
 ## Project structure
 
 ```
-week2-zjerome2023/
+week3-zjerome2023/
 ├── client/                 # React + Vite frontend
 │   └── src/
 │       ├── components/     # Forms, charts, lists
@@ -236,6 +245,7 @@ week2-zjerome2023/
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, request and auth flows |
 | [docs/USAGE.md](docs/USAGE.md) | User guide: register, CRUD, charts |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Atlas, Render, Netlify, CI/CD deploy flow |
+| [docs/API_TESTING.md](docs/API_TESTING.md) | Automated + manual test cases, request/response examples, Postman collection |
 | [docs/COST_ANALYSIS.md](docs/COST_ANALYSIS.md) | AI token/cost estimates, Postman/curl examples |
 | [docs/VERIFICATION.md](docs/VERIFICATION.md) | Deployment smoke-test checklist and results |
 
@@ -245,7 +255,8 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on push and pull requests to `m
 
 1. Install server and client dependencies
 2. Lint the client
-3. Build the client
+3. Run server API integration tests
+4. Build the client
 
 On push to `main`, the workflow also deploys the frontend to Netlify and can trigger a Render backend deploy hook.
 
