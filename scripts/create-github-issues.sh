@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Create a personal GitHub project board and issues in the repo for BUILD_STEPS.md (Steps 0–16).
+# Create a personal GitHub project board and issues in the repo for BUILD_STEPS.md (Steps 0–28).
 # Prerequisites: gh auth login with project scopes (gh auth refresh -s project,read:project)
 set -euo pipefail
 
-REPO="FAU-AI-HootCamp-Summer-2026/week2-zjerome2023"
+REPO="FAU-AI-HootCamp-Summer-2026/week3-zjerome2023"
 PROJECT_OWNER=$(gh api user -q .login)
 PROJECT_TITLE="Budget Tracker"
 
@@ -49,6 +49,17 @@ STEPS=(
   "14|CI/CD pipeline with automatic deployment|Step 14 — GitHub Actions + deploy on push to main."
   "15|Documentation|Step 15 — README and docs/ guides."
   "16|Deploy verification and smoke test|Step 16 — Local and production smoke tests."
+  "18|AI planning and issue setup|Step 18 — Update PLAN.md with AI scope; create issues for Steps 18–28."
+  "19|Secrets hygiene for Gemini|Step 19 — GEMINI_API_KEY in server/.env.example; verify .gitignore."
+  "20|Shared AI infrastructure|Step 20 — aiService, rate limiter, authenticated /api/ai routes."
+  "21|Category suggestion API|Step 21 — POST /api/ai/suggest-category with keyword fallback."
+  "22|Category suggestion UI|Step 22 — useCategorySuggestion hook and ExpenseForm chip."
+  "23|Extract analytics queries helper|Step 23 — fetchAnalyticsBundle for analytics and insights."
+  "24|Spending insights API|Step 24 — POST /api/ai/spending-insights with 1h cache."
+  "25|Spending insights UI|Step 25 — InsightsPanel on Dashboard."
+  "26|AI documentation|Step 26 — README AI section and docs/COST_ANALYSIS.md."
+  "27|Local verify and production deploy|Step 27 — Local happy path + auth; Render env; smoke test."
+  "28|Demo video and final review|Step 28 — Record demo with AI features; close all issues; finalize README."
 )
 
 for entry in "${STEPS[@]}"; do

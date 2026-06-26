@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useCategorySuggestion } from '../hooks/useCategorySuggestion';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { getErrorMessage } from '../utils/auth';
 import { todayInputValue } from '../utils/format';
@@ -14,6 +15,17 @@ export default function ExpenseForm({ categories, onSubmit, disabled }) {
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [dismissedKey, setDismissedKey] = useState('');
+
+  const { suggestion, loading: suggestionLoading, clearSuggestion } = useCategorySuggestion(
+    description,
+    categories,
+    { enabled: isAuthenticated }
+  );
+
+  const suggestionKey = suggestion ? `${description}:${suggestion.categoryId}` : '';
+  const showSuggestionChip =
+    suggestion && !suggestionLoading && dismissedKey !== suggestionKey;
 
   function resetForm() {
     setAmount('');
@@ -21,6 +33,19 @@ export default function ExpenseForm({ categories, onSubmit, disabled }) {
     setDate(todayInputValue());
     setDescription('');
     setError('');
+    setDismissedKey('');
+    clearSuggestion();
+  }
+
+  function handleAcceptSuggestion() {
+    if (!suggestion?.categoryId) return;
+    setCategoryId(suggestion.categoryId);
+    clearSuggestion();
+    setDismissedKey('');
+  }
+
+  function handleDismissSuggestion() {
+    setDismissedKey(suggestionKey);
   }
 
   async function handleSubmit(event) {
@@ -148,6 +173,34 @@ export default function ExpenseForm({ categories, onSubmit, disabled }) {
               placeholder="Optional memo"
               maxLength={500}
             />
+            {isAuthenticated && (suggestionLoading || showSuggestionChip) && (
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+                {suggestionLoading && (
+                  <span className="text-gray-500">Finding category…</span>
+                )}
+                {showSuggestionChip && (
+                  <>
+                    <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-indigo-900">
+                      Suggested: {suggestion.categoryName}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleAcceptSuggestion}
+                      className="rounded-md bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDismissSuggestion}
+                      className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Dismiss
+                    </button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

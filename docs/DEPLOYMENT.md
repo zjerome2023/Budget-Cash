@@ -52,6 +52,10 @@ The repo includes `render.yaml` as a blueprint for the API service.
 | `JWT_EXPIRES_IN` | `7d` | Optional |
 | `CLIENT_URL` | `https://budgetcash.netlify.app` | Netlify site URL for CORS |
 | `NODE_ENV` | `production` | Enables secure cookies |
+| `GEMINI_API_KEY` | (from Google AI Studio) | **Server only** — required for AI features |
+| `AI_MODEL` | `gemini-2.5-flash` | Gemini model for category suggestion and insights |
+| `AI_RATE_LIMIT_WINDOW_MS` | `3600000` | Optional; per-user AI rate-limit window |
+| `AI_RATE_LIMIT_MAX` | `30` | Optional; max AI requests per user per window |
 | `PORT` | `10000` | Render sets this automatically |
 
 After deploy, the API URL is `https://budget-tracker-api-70sh.onrender.com`.

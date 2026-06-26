@@ -1,10 +1,12 @@
 # Budget Tracker — Build Steps
 
-Incremental build plan covering version control, database design, backend, auth, frontend, and documentation. **Complete each step fully, run the Verify checkpoint, then commit** with a conventional message (`feat:`, `fix:`, `chore:`, `docs:`) before moving on.
+Incremental build plan covering version control, database design, backend, auth, frontend, documentation, and **Week 3 AI features**. **Complete each step fully, run the Verify checkpoint, then commit** with a conventional message (`feat:`, `fix:`, `chore:`, `docs:`) before moving on.
 
 Close the matching GitHub issue when the step is verified.
 
 > **Week 2 note:** Formal automated testing is not required — manual Verify checkpoints are sufficient. Endpoint/unit tests are covered in Week 3.
+>
+> **Week 3 (Steps 18–27):** Two AI features powered by Google Gemini (`gemini-2.0-flash`, server-side only): smart category suggestion and AI spending insights. See [AI architecture](#ai-architecture) and [AI feature reference](#ai-feature-reference) at the end of this doc.
 
 ---
 
@@ -22,7 +24,7 @@ Close the matching GitHub issue when the step is verified.
 - Add root `.gitignore` (`.env`, `node_modules/`, `dist/`, `.netlify/`, etc.)
 - Add `server/.env.example` and `client/.env.example` with placeholder variables
 - Add `PLAN.md`, `BUILD_STEPS.md`, and stub `README.md`
-- Create GitHub project board and issues for Steps 0–16
+- Create GitHub project board and issues for Steps 0–28
 
 **Verify:**
 
@@ -396,22 +398,324 @@ Close the matching GitHub issue when the step is verified.
 
 ---
 
-## Step 17 — Demo video and final review
+## Week 3 — AI Features (Steps 18–27)
+
+**Scope:** Implement two AI features for the Budget Tracker:
+
+1. **Smart Category Suggestion** — auto-suggest a category while typing an expense description
+2. **AI Spending Insights** — plain-English spending summary for the selected date range
+
+**Provider:** Google Gemini `gemini-2.0-flash` (free tier, server-side only)
+
+**Integration points:** `client/src/components/ExpenseForm.jsx`, `client/src/pages/Dashboard.jsx`, `server/controllers/analyticsController.js`, `server/index.js` (mount `/api/ai`)
+
+**Auth rule:** All `/api/ai/*` routes require JWT. Client hooks are disabled for anonymous users; write actions show `LoginPrompt`.
+
+---
+
+## Step 18 — AI planning and issue setup
+
+**Requirement:** Week 3 planning docs · issue tracking
+
+**Goal:** Document AI scope in `PLAN.md` and track work on the project board.
+
+**Tasks:**
+
+- Add AI features to **In scope** in `PLAN.md`:
+  - Smart category suggestion (debounced, AI + keyword fallback)
+  - AI spending insights card (button-triggered, 1h cache)
+  - Server-side Gemini via `aiService.js` (no client API keys)
+  - Per-user rate limit (30 req/hour shared across AI endpoints)
+- Add API rows to `PLAN.md`: `POST /api/ai/suggest-category`, `POST /api/ai/spending-insights` (auth required)
+- Create GitHub issues for Steps 18–28 on the project board (extend `scripts/create-github-issues.sh` or use `gh issue create`)
+- Move enhancements (OAuth, receipt OCR, streaming insights) to **Backlog** column
+
+**Verify:**
+
+- [ ] `PLAN.md` lists both AI features and new `/api/ai` endpoints
+- [ ] Project board has open issues for each AI step (18–28)
+
+**Commit:** `docs: add AI feature scope and build steps`
+
+---
+
+## Step 19 — Secrets hygiene for Gemini
+
+**Requirement:** Secrets hygiene
+
+**Goal:** Configure API keys safely before any AI code runs.
+
+**Tasks:**
+
+- Add to `server/.env.example`:
+
+  ```
+  GEMINI_API_KEY=<your-gemini-api-key>
+  AI_MODEL=gemini-2.0-flash
+  AI_RATE_LIMIT_WINDOW_MS=3600000
+  AI_RATE_LIMIT_MAX=30
+  ```
+
+- Copy values into local `server/.env` (key from [Google AI Studio](https://aistudio.google.com/apikey))
+- Confirm root `.gitignore` ignores `.env`, `.env.local`, `.netlify/`, `.vercel/`
+- **Never** add `GEMINI_API_KEY` to the React client or any `VITE_*` variable
+
+**Verify:**
+
+- [ ] `git status` does not show `server/.env`
+- [ ] `server/.env.example` has placeholders (no real keys)
+- [ ] `grep -r GEMINI_API_KEY client/` returns nothing
+
+**Commit:** `chore: add Gemini env vars to server .env.example`
+
+---
+
+## Step 20 — Shared AI infrastructure
+
+**Requirement:** Week 3 AI API integration
+
+**Goal:** Gemini client wrapper, prompts, errors, rate limiter, and authenticated route shell.
+
+**Tasks:**
+
+- Install: `cd server && npm install @google/generative-ai`
+- Create server files:
+
+  | File | Purpose |
+  |------|---------|
+  | `server/services/aiService.js` | Gemini client, `callGemini()`, error handling |
+  | `server/utils/aiPrompts.js` | Prompt templates |
+  | `server/utils/aiErrors.js` | `AiConfigError`, `AiServiceError`, `AiRateLimitError` |
+  | `server/middleware/aiRateLimiter.js` | Per-user 30 req/hr in-memory limit |
+  | `server/controllers/aiController.js` | Handlers (stubs OK until Steps 21/24) |
+  | `server/routes/ai.js` | Route definitions + validation |
+
+- Mount in `server/index.js`: `app.use('/api/ai', aiRoutes)`
+- Apply `authenticate` and `aiRateLimiter` before handlers (follow `server/routes/analytics.js`):
+
+  ```javascript
+  router.use(authenticate);
+  router.use(aiRateLimiter);
+  router.post('/suggest-category', validation, handleValidation, asyncHandler(suggestCategory));
+  router.post('/spending-insights', validation, handleValidation, asyncHandler(spendingInsights));
+  ```
+
+- `aiService.js`: check `GEMINI_API_KEY`, call Gemini with JSON response mode, retry once on 429, throw safe errors on failure (see [AI architecture](#ai-architecture))
+
+**Verify:**
+
+- [ ] Server starts with `GEMINI_API_KEY` set in `server/.env`
+- [ ] `POST /api/ai/suggest-category` without token → 401
+- [ ] `POST /api/ai/spending-insights` without token → 401
+- [ ] Missing `GEMINI_API_KEY` → 503 with safe message (not stack trace)
+
+**Commit:** `feat: add shared AI infrastructure and authenticated routes`
+
+---
+
+## Step 21 — Category suggestion API
+
+**Requirement:** Week 3 AI feature 1
+
+**Goal:** Backend endpoint that suggests a category from an expense description.
+
+**Tasks:**
+
+- Create `server/utils/categoryKeywords.js` — keyword fallback map (see [Feature 1 reference](#feature-1--smart-category-suggestion))
+- Implement `aiController.suggestCategory`: load user categories → try AI → fallback to keywords on failure
+- Add classification prompt in `aiPrompts.js`
+- Validate AI response: `categoryId` must exist in user's list or treat as `null`
+- Request validation: `description` required, string, trim, min 3, max 500 chars
+
+**API:** `POST /api/ai/suggest-category` — success `200` with `{ suggestion: { categoryId, categoryName, confidence, source } }` or `{ suggestion: null }`. Errors: 400, 401, 429, 502, 503.
+
+**Verify:**
+
+- [ ] Postman/curl with valid token + `"Whole Foods groceries"` → suggestion with valid `categoryId`
+- [ ] Description < 3 chars → 400
+- [ ] No auth token → 401
+- [ ] Invalid category ID from AI → treated as `null` (no crash)
+- [ ] Unset `GEMINI_API_KEY` → keyword fallback or 503 as designed
+
+**Commit:** `feat: add AI category suggestion endpoint`
+
+---
+
+## Step 22 — Category suggestion UI
+
+**Requirement:** Week 3 AI feature 1 · auth protection
+
+**Goal:** Debounced suggestion chip in the expense form; auth-gated on the client.
+
+**Tasks:**
+
+- Create `client/src/hooks/useCategorySuggestion.js`:
+  - 500ms debounce, `AbortController` for stale requests
+  - Skip if `description.length < 3` or `categories.length === 0`
+  - Pass `{ enabled: isAuthenticated }` to disable when logged out
+- Update `client/src/components/ExpenseForm.jsx`:
+  - Loading: "Finding category…"
+  - Chip: **Suggested: Groceries** with Accept / Dismiss
+  - Call `clearSuggestion()` in `resetForm()`
+- Anonymous users: hook disabled; login prompt blocks form submit
+
+**Verify (local):**
+
+- [ ] Logged in: type description → chip appears after debounce
+- [ ] Accept → category dropdown updates
+- [ ] Submit expense → suggestion clears
+- [ ] Logged out: no API calls; form shows login prompt on submit
+- [ ] AI failure: silent fallback or no chip (form still submittable)
+
+**Commit:** `feat: add category suggestion UI to expense form`
+
+---
+
+## Step 23 — Extract analytics queries helper
+
+**Requirement:** Week 3 AI feature 2 (prerequisite)
+
+**Goal:** Shared aggregation logic for analytics API and spending insights.
+
+**Tasks:**
+
+- Refactor `server/controllers/analyticsController.js` → extract `server/utils/analyticsQueries.js` with `fetchAnalyticsBundle(userId, query)`
+- Update `analyticsController` to call the helper (no behavior change)
+
+**Verify:**
+
+- [ ] Existing analytics endpoints return same data as before refactor
+- [ ] `GET /api/analytics/summary` without token → 401
+
+**Commit:** `refactor: extract shared analytics query helper`
+
+---
+
+## Step 24 — Spending insights API
+
+**Requirement:** Week 3 AI feature 2
+
+**Goal:** Backend endpoint that generates plain-English spending insights.
+
+**Tasks:**
+
+- Create `server/utils/insightsCache.js` — in-memory Map, 1h TTL
+- Implement `aiController.spendingInsights` using `fetchAnalyticsBundle`
+- Add `buildCompactAnalyticsPayload()` — ~200 tokens, not raw transactions (see [Feature 2 reference](#feature-2--ai-spending-insights))
+- Add summarization prompt in `aiPrompts.js`
+- Support `forceRefresh: true` to bypass cache
+- Skip Gemini call when `transactionCount === 0`
+
+**API:** `POST /api/ai/spending-insights` — body: `{ startDate, endDate, dateRangeLabel, forceRefresh }`. Success: `{ insights: { bullets, tip, generatedAt, cached } }` or `{ insights: null, message }`.
+
+**Verify:**
+
+- [ ] Period with transactions → bullets + tip
+- [ ] Empty period → `insights: null`, no Gemini call
+- [ ] Second request same range → `cached: true`
+- [ ] `forceRefresh: true` → `cached: false`
+- [ ] No auth token → 401
+
+**Commit:** `feat: add AI spending insights endpoint`
+
+---
+
+## Step 25 — Spending insights UI
+
+**Requirement:** Week 3 AI feature 2 · auth protection
+
+**Goal:** Dashboard card with generate/regenerate flow; auth-gated.
+
+**Tasks:**
+
+- Create `client/src/components/InsightsPanel.jsx`
+- Wire into `client/src/pages/Dashboard.jsx` after `SummaryCards`
+- Add `DATE_RANGE_LABELS` to `client/src/utils/dateRange.js`
+- Clear displayed insights when date range changes
+- Button states: "Generate insights" / "Analyzing…" / "Regenerate"
+- Only render actionable button for authenticated users
+
+**Verify (local):**
+
+- [ ] Generate insights → spinner → bullets + tip display
+- [ ] Change date range → insights clear
+- [ ] Regenerate → fresh insights (`cached: false`)
+- [ ] Empty period → friendly message, no error
+- [ ] Logged out: panel disabled or prompts login (no API call)
+
+**Commit:** `feat: add AI spending insights panel to dashboard`
+
+---
+
+## Step 26 — AI documentation
+
+**Requirement:** Week 3 documentation · cost analysis
+
+**Goal:** Document features, costs, and API usage.
+
+**Tasks:**
+
+- Add **AI Features** section to `README.md` (what each feature does, `GEMINI_API_KEY` setup, rate limits, cache)
+- Create `docs/COST_ANALYSIS.md` with token/cost table (both features ≈ $0 on Gemini free tier)
+- Document Postman requests for both `/api/ai/*` endpoints with auth header
+
+**Verify:**
+
+- [ ] README explains local Gemini setup
+- [ ] Cost analysis table present
+- [ ] New developer can find AI env vars in `server/.env.example`
+
+**Commit:** `docs: add AI feature documentation and cost analysis`
+
+---
+
+## Step 27 — Local verify and production deploy
+
+**Requirement:** Verify before deploy
+
+**Goal:** Test locally (happy path + auth), deploy, then smoke-test live URL.
+
+**Tasks:**
+
+- **Local verify first** (do not deploy until these pass):
+  - Happy path: register → login → add expense → category suggestion → generate insights
+  - Auth API: `POST /api/ai/*` without token → 401
+  - Auth UI: logged out → no AI API calls; login prompt on writes
+  - Secrets: `git status` shows no `.env`; no API keys in git history
+- Add `GEMINI_API_KEY` to Render dashboard env vars
+- Push to `main` → CI passes → auto-deploy
+- **Production smoke test:** log in → suggestion chip → generate insights → no console errors
+
+**Verify:**
+
+- [ ] Local happy path passes (both AI features)
+- [ ] Local auth checks pass (API 401 + UI login prompt)
+- [ ] `GEMINI_API_KEY` set on Render (not in repo)
+- [ ] Production smoke test passes on deployed URL
+- [ ] Close GitHub issues for Steps 18–27 (Step 28 closes all remaining)
+
+**Commit:** `chore: verify AI features in production`
+
+---
+
+## Step 28 — Demo video and final review
 
 **Requirement:** Deliverables · Evaluation Criteria
+
+**Goal:** Record demo and close out all project issues after MVP + AI features are complete.
 
 **Tasks:**
 
 - Record 2–3 minute demo: **registration, login, and CRUD operations** (required in deliverables)
-- Include chart visualization and auth protection demo
-- Close all completed GitHub issues
-- Move backlog items (OAuth, budgets, cloud functions, etc.) to Backlog column
+- Include chart visualization, auth protection demo, and both AI features
+- Close all completed GitHub issues (Steps 0–28)
+- Move backlog items (OAuth, receipt OCR, budgets, etc.) to Backlog column
 - Final README check for deployed URL and documentation links
 
 **Verify:**
 
-- [ ] Demo shows registration, login, and full CRUD
-- [ ] All MVP issues closed on project board
+- [ ] Demo shows registration, login, full CRUD, and AI features
+- [ ] All issues closed on project board
 - [ ] Project deliverables and evaluation criteria satisfied
 
 **Commit:** `docs: add demo link and finalize README` (if needed)
@@ -429,6 +733,10 @@ JWT_SECRET=<long-random-string>
 JWT_EXPIRES_IN=7d
 CLIENT_URL=http://localhost:5173
 NODE_ENV=development
+GEMINI_API_KEY=<your-gemini-api-key>
+AI_MODEL=gemini-2.0-flash
+AI_RATE_LIMIT_WINDOW_MS=3600000
+AI_RATE_LIMIT_MAX=30
 ```
 
 ### Client (`client/.env`)
@@ -442,9 +750,175 @@ VITE_API_URL=http://localhost:5000/api
 ## Backlog (post-MVP issues)
 
 - Google OAuth login
+- AI budget recommendations with monthly caps
+- Receipt OCR for auto-fill expense fields
+- Streaming insights (SSE)
 - Monthly budget caps with warning badges
 - Recurring expenses
 - CSV export
 - Dark mode toggle
 - Cloud functions / scheduled jobs (optional server-side logic per §3)
+
+---
+
+## AI architecture
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant ExpenseForm
+  participant InsightsPanel
+  participant API as Express_API
+  participant AI as aiService
+  participant DB as MongoDB
+  participant Gemini
+
+  Note over User,Gemini: Feature 1 - Category Suggestion
+  User->>ExpenseForm: types description
+  ExpenseForm->>API: POST /api/ai/suggest-category
+  API->>DB: load user categories
+  API->>AI: suggestCategory(desc, categories)
+  AI->>Gemini: short classification prompt
+  Gemini-->>AI: JSON response
+  AI-->>API: parsed suggestion
+  API-->>ExpenseForm: suggestedCategoryId + name
+  User->>ExpenseForm: clicks Accept
+
+  Note over User,Gemini: Feature 2 - Spending Insights
+  User->>InsightsPanel: clicks Generate insights
+  InsightsPanel->>API: POST /api/ai/spending-insights
+  API->>DB: aggregate summary/byCategory/overTime
+  API->>AI: generateInsights(aggregatedData)
+  AI->>Gemini: summarization prompt
+  Gemini-->>AI: bullet insights + tip
+  AI-->>API: formatted response
+  API-->>InsightsPanel: insights text
+```
+
+---
+
+## AI feature reference
+
+Technical details referenced by Steps 21–25.
+
+### Feature 1 — Smart Category Suggestion
+
+**UX:** Type description (min 3 chars) → 500ms debounce → chip with Accept/Dismiss → clears on submit. AI failure → keyword fallback → show nothing (never block submit).
+
+**Classification prompt (`aiPrompts.js`):**
+
+```
+You are a budget app assistant. Given an expense description and a list of the user's categories, pick the single best matching category.
+
+Categories (id → name):
+{categoryList}
+
+Expense description: "{description}"
+
+Respond with JSON only:
+{
+  "categoryId": "<exact id from list or null>",
+  "confidence": "high" | "medium" | "low",
+  "reasoning": "<one short sentence>"
+}
+
+Rules:
+- categoryId MUST be one of the provided ids, or null if no good match
+- Do not invent categories
+- Prefer the most specific match
+```
+
+**Keyword fallback (`categoryKeywords.js`):**
+
+```javascript
+const KEYWORD_MAP = [
+  { keywords: ['uber', 'lyft', 'gas', 'parking', 'metro', 'transit'], names: ['transport', 'transportation', 'travel', 'auto'] },
+  { keywords: ['grocery', 'whole foods', 'trader joe', 'walmart', 'costco'], names: ['groceries', 'food'] },
+  { keywords: ['restaurant', 'lunch', 'dinner', 'coffee', 'starbucks', 'doordash'], names: ['dining', 'food', 'restaurants'] },
+  { keywords: ['netflix', 'spotify', 'subscription'], names: ['entertainment', 'subscriptions'] },
+  { keywords: ['rent', 'mortgage', 'utilities', 'electric'], names: ['housing', 'bills', 'utilities'] },
+];
+```
+
+| Edge case | Behavior |
+|-----------|----------|
+| Description < 3 chars | No API call |
+| 0 categories | No API call |
+| AI returns null | Hide chip |
+| Rate limited | Subtle pause message; keyword fallback may work |
+| Network offline | No chip; form works normally |
+
+---
+
+### Feature 2 — AI Spending Insights
+
+**UX:** Dashboard card → "Generate insights" → spinner → 3–5 bullets + tip → Regenerate bypasses cache → date range change clears insights → empty period shows message without calling AI.
+
+**Summarization prompt (`aiPrompts.js`):**
+
+```
+You are a friendly personal finance assistant. Analyze this spending data and provide helpful insights.
+
+Data:
+{jsonPayload}
+
+Respond with JSON only:
+{
+  "bullets": ["<insight 1>", "<insight 2>", "<insight 3>"],
+  "tip": "<one specific, actionable savings tip>"
+}
+
+Rules:
+- Provide 3 to 5 bullet insights
+- Use dollar amounts from the data (format as $X.XX)
+- Mention the top category and its percentage
+- Note any spending spikes or patterns in daily totals
+- Keep each bullet to one sentence
+- Tip should be practical and specific to the data
+- Do not invent transactions or categories not in the data
+- Be encouraging, not judgmental
+```
+
+**Compact payload builder:**
+
+```javascript
+function buildCompactAnalyticsPayload(summary, byCategory, overTime, label) {
+  const total = summary.totalSpend;
+  return {
+    period: label || 'Selected period',
+    totalSpend: total,
+    transactionCount: summary.transactionCount,
+    topCategory: summary.topCategory,
+    categories: byCategory.map(c => ({
+      name: c.category,
+      total: c.total,
+      percent: total > 0 ? Math.round((c.total / total) * 100) : 0,
+    })),
+    dailyTotals: overTime.map(d => ({ date: d.period, total: d.total })),
+    avgPerTransaction: total / summary.transactionCount,
+    highestDay: overTime.reduce((max, d) => d.total > max.total ? d : max, overTime[0]),
+  };
+}
+```
+
+| Edge case | Behavior |
+|-----------|----------|
+| 0 transactions | Return `insights: null`, no Gemini call |
+| Gemini error | 502 with friendly UI message |
+| Cached result | Show footnote; Regenerate gets fresh response |
+
+---
+
+## AI testing checklist (Step 27)
+
+**API (Postman/curl):**
+
+- [ ] Category: valid description → valid `categoryId`; < 3 chars → 400; no auth → 401; invalid AI id → null; missing key → 503; 31st req/hr → 429
+- [ ] Insights: period with data → bullets + tip; empty → `insights: null`; cache hit → `cached: true`; `forceRefresh` → fresh; no auth → 401
+
+**UI smoke tests:**
+
+- [ ] Category suggestion debounce, accept, clear on submit
+- [ ] Insights generate, regenerate, clear on date change
+- [ ] Anonymous user: no AI calls; login prompt on writes
 

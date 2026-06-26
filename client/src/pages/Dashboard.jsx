@@ -3,6 +3,7 @@ import CategoryManager from '../components/CategoryManager';
 import DateRangeFilter from '../components/DateRangeFilter';
 import ErrorAlert from '../components/ErrorAlert';
 import ExpenseForm from '../components/ExpenseForm';
+import InsightsPanel from '../components/InsightsPanel';
 import SpendingByCategoryChart from '../components/SpendingByCategoryChart';
 import SpendingOverTimeChart from '../components/SpendingOverTimeChart';
 import SummaryCards from '../components/SummaryCards';
@@ -114,6 +115,8 @@ export default function Dashboard() {
       {error && <ErrorAlert message={error} />}
 
       <SummaryCards summary={summary} loading={loading} />
+
+      <InsightsPanel key={dateRange} dateRange={dateRange} disabled={loading} />
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
