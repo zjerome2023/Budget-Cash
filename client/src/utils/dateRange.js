@@ -4,6 +4,12 @@ export const DATE_RANGES = {
   ALL: 'all',
 };
 
+export const DATE_RANGE_LABELS = {
+  [DATE_RANGES.WEEK]: 'This week',
+  [DATE_RANGES.MONTH]: 'This month',
+  [DATE_RANGES.ALL]: 'All time',
+};
+
 function toISODateString(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -34,12 +40,5 @@ export function getDateRangeParams(range) {
 }
 
 export function getDateRangeLabel(range) {
-  switch (range) {
-    case DATE_RANGES.WEEK:
-      return 'This week';
-    case DATE_RANGES.MONTH:
-      return 'This month';
-    default:
-      return 'All time';
-  }
+  return DATE_RANGE_LABELS[range] ?? 'Selected period';
 }
