@@ -6,6 +6,9 @@ export function useCategorySuggestion(description, categories, { enabled = true 
   const [loading, setLoading] = useState(false);
   const abortRef = useRef(null);
 
+  const trimmed = description.trim();
+  const shouldFetch = enabled && trimmed.length >= 3 && categories.length > 0;
+
   const clearSuggestion = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
@@ -14,8 +17,9 @@ export function useCategorySuggestion(description, categories, { enabled = true 
   }, []);
 
   useEffect(() => {
-    if (!enabled || description.trim().length < 3 || categories.length === 0) {
-      clearSuggestion();
+    if (!shouldFetch) {
+      abortRef.current?.abort();
+      abortRef.current = null;
       return undefined;
     }
 
@@ -30,7 +34,7 @@ export function useCategorySuggestion(description, categories, { enabled = true 
       try {
         const { data } = await api.post(
           '/ai/suggest-category',
-          { description: description.trim() },
+          { description: trimmed },
           { signal: controller.signal }
         );
 
@@ -52,7 +56,11 @@ export function useCategorySuggestion(description, categories, { enabled = true 
       clearTimeout(timer);
       abortRef.current?.abort();
     };
-  }, [description, categories, enabled, clearSuggestion]);
+  }, [trimmed, categories, shouldFetch]);
 
-  return { suggestion, loading, clearSuggestion };
+  return {
+    suggestion: shouldFetch ? suggestion : null,
+    loading: shouldFetch && loading,
+    clearSuggestion,
+  };
 }

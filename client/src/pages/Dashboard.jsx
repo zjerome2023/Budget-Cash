@@ -116,7 +116,7 @@ export default function Dashboard() {
 
       <SummaryCards summary={summary} loading={loading} />
 
-      <InsightsPanel dateRange={dateRange} disabled={loading} />
+      <InsightsPanel key={dateRange} dateRange={dateRange} disabled={loading} />
 
       <div className="grid gap-8 lg:grid-cols-2">
         <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">

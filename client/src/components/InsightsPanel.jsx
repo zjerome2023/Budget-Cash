@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import api from '../services/api';
 import { DATE_RANGE_LABELS, getDateRangeParams } from '../utils/dateRange';
@@ -11,12 +11,6 @@ export default function InsightsPanel({ dateRange, disabled = false }) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    setInsights(null);
-    setMessage('');
-    setError('');
-  }, [dateRange]);
 
   async function handleGenerate(forceRefresh = false) {
     if (!isAuthenticated || loading) {

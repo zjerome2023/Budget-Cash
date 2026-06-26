@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useCategorySuggestion } from '../hooks/useCategorySuggestion';
 import { useRequireAuth } from '../hooks/useRequireAuth';
 import { getErrorMessage } from '../utils/auth';
@@ -15,7 +15,7 @@ export default function ExpenseForm({ categories, onSubmit, disabled }) {
   const [description, setDescription] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [suggestionDismissed, setSuggestionDismissed] = useState(false);
+  const [dismissedKey, setDismissedKey] = useState('');
 
   const { suggestion, loading: suggestionLoading, clearSuggestion } = useCategorySuggestion(
     description,
@@ -23,9 +23,9 @@ export default function ExpenseForm({ categories, onSubmit, disabled }) {
     { enabled: isAuthenticated }
   );
 
-  useEffect(() => {
-    setSuggestionDismissed(false);
-  }, [description, suggestion?.categoryId]);
+  const suggestionKey = suggestion ? `${description}:${suggestion.categoryId}` : '';
+  const showSuggestionChip =
+    suggestion && !suggestionLoading && dismissedKey !== suggestionKey;
 
   function resetForm() {
     setAmount('');
@@ -33,7 +33,7 @@ export default function ExpenseForm({ categories, onSubmit, disabled }) {
     setDate(todayInputValue());
     setDescription('');
     setError('');
-    setSuggestionDismissed(false);
+    setDismissedKey('');
     clearSuggestion();
   }
 
@@ -41,11 +41,11 @@ export default function ExpenseForm({ categories, onSubmit, disabled }) {
     if (!suggestion?.categoryId) return;
     setCategoryId(suggestion.categoryId);
     clearSuggestion();
-    setSuggestionDismissed(false);
+    setDismissedKey('');
   }
 
   function handleDismissSuggestion() {
-    setSuggestionDismissed(true);
+    setDismissedKey(suggestionKey);
   }
 
   async function handleSubmit(event) {
@@ -173,12 +173,12 @@ export default function ExpenseForm({ categories, onSubmit, disabled }) {
               placeholder="Optional memo"
               maxLength={500}
             />
-            {isAuthenticated && (suggestionLoading || (suggestion && !suggestionDismissed)) && (
+            {isAuthenticated && (suggestionLoading || showSuggestionChip) && (
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                 {suggestionLoading && (
                   <span className="text-gray-500">Finding category…</span>
                 )}
-                {suggestion && !suggestionLoading && !suggestionDismissed && (
+                {showSuggestionChip && (
                   <>
                     <span className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-indigo-900">
                       Suggested: {suggestion.categoryName}
