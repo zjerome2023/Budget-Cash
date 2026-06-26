@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "node --test --test-concurrency=1 tests/**/*.test.js"
+    "test": "node --test --test-concurrency=1 tests/auth.test.js tests/categories.test.js tests/transactions.test.js"
   },
   "keywords": [],
   "author": "",
