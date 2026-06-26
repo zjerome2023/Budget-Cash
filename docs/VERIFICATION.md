@@ -27,6 +27,7 @@ Smoke-test results for local development and production (Steps 16 and 27).
 
 | Check | Result |
 |-------|--------|
+| `npm test` in `server/` (26 integration tests) | Pass |
 | `GET /api/health` returns ok | Pass |
 | Register → login | Pass |
 | Create / update / delete category | Pass |
@@ -129,5 +130,6 @@ curl -X OPTIONS https://budget-tracker-api-70sh.onrender.com/api/transactions \
 
 - [DEPLOYMENT.md](./DEPLOYMENT.md) — hosting setup (includes `GEMINI_API_KEY` on Render)
 - [COST_ANALYSIS.md](./COST_ANALYSIS.md) — AI token/cost estimates and API examples
+- [API_TESTING.md](./API_TESTING.md) — automated and manual test cases
 - [USAGE.md](./USAGE.md) — end-user flows
 - [../README.md](../README.md) — live demo link
