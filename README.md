@@ -19,6 +19,8 @@ Tracking everyday expenses in a spreadsheet or notes app makes it hard to see pa
 - Manage custom spending categories with chart colors
 - View summary stats and charts (spending by category and over time)
 - Filter data by date range (this week, this month, or all time)
+- **AI category suggestion** while typing an expense description (debounced)
+- **AI spending insights** — plain-English summary for the selected date range
 
 All data is scoped to the logged-in user. Anonymous users cannot create or modify records.
 
@@ -30,6 +32,7 @@ All data is scoped to the logged-in user. Anonymous users cannot create or modif
 | Backend | Express.js, Node.js |
 | Database | MongoDB Atlas with Mongoose |
 | Auth | JWT (`Authorization: Bearer`) + bcrypt |
+| AI | Google Gemini (`gemini-2.5-flash`, server-side only) |
 | CI/CD | GitHub Actions → Netlify (frontend) + Render (API) |
 
 ## Prerequisites
@@ -116,6 +119,10 @@ Open the client, register a new account, and add an expense on the dashboard.
 | `JWT_EXPIRES_IN` | No | Token lifetime (default `7d`) |
 | `CLIENT_URL` | Yes (prod) | Frontend origin for CORS (e.g. `http://localhost:5173`) |
 | `NODE_ENV` | No | `development` or `production` |
+| `GEMINI_API_KEY` | Yes (AI) | Google AI Studio API key — **server only**, never in client |
+| `AI_MODEL` | No | Gemini model (default `gemini-2.5-flash`) |
+| `AI_RATE_LIMIT_WINDOW_MS` | No | Per-user AI rate-limit window (default `3600000` = 1 hour) |
+| `AI_RATE_LIMIT_MAX` | No | Max AI requests per user per window (default `30`) |
 
 ### Client (`client/.env`)
 
@@ -124,6 +131,48 @@ Open the client, register a new account, and add an expense on the dashboard.
 | `VITE_API_URL` | Yes | API base URL (e.g. `http://localhost:5001/api`) |
 
 Committed templates: `server/.env.example`, `client/.env.example`. Never commit `.env` files.
+
+## AI features
+
+Both AI features call Google Gemini **from the Express server only**. The API key is stored in `server/.env` as `GEMINI_API_KEY` and is never exposed to the browser or any `VITE_*` variable.
+
+### 1. Smart category suggestion
+
+While adding an expense, type a description (3+ characters). After a 500 ms debounce, the form shows a **Suggested: {category}** chip with **Accept** / **Dismiss**. Accept fills the category dropdown. If Gemini is unavailable, the server falls back to keyword matching or returns no suggestion — the form always remains submittable.
+
+### 2. AI spending insights
+
+On the dashboard, click **Generate insights** for the current date range (this week / this month / all time). The panel shows 3–5 bullet insights plus an actionable tip. **Regenerate** fetches fresh insights (`forceRefresh`). Results are cached for **1 hour** per user and date range. Empty periods show a friendly message without calling Gemini.
+
+### Local Gemini setup
+
+1. Get a free API key from [Google AI Studio](https://aistudio.google.com/apikey).
+2. Add to `server/.env` (see `server/.env.example`):
+
+   ```
+   GEMINI_API_KEY=<your-key>
+   AI_MODEL=gemini-2.5-flash
+   ```
+
+3. Restart the API (`npm run dev` in `server/`).
+4. For production, set `GEMINI_API_KEY` and `AI_MODEL` in the Render dashboard (not in git).
+
+### Rate limits and cache
+
+| Control | Value | Notes |
+|---------|-------|-------|
+| Server rate limit | 30 req/hour per user | Shared across both `/api/ai/*` endpoints (`AI_RATE_LIMIT_MAX`) |
+| Insights cache | 1 hour TTL | In-memory; Regenerate bypasses with `forceRefresh: true` |
+| Client debounce | 500 ms | Category suggestion only |
+
+### Testing with Postman or curl
+
+1. `POST /api/auth/login` → copy `token`.
+2. Add header: `Authorization: Bearer <token>`.
+3. Call `POST /api/ai/suggest-category` with body `{ "description": "Whole Foods groceries" }`.
+4. Call `POST /api/ai/spending-insights` with body `{ "startDate": "2026-06-01", "endDate": "2026-06-25", "dateRangeLabel": "This month" }`.
+
+Full request/response examples and token cost estimates: [docs/COST_ANALYSIS.md](docs/COST_ANALYSIS.md).
 
 ## API overview
 
@@ -147,6 +196,8 @@ All protected routes require `Authorization: Bearer <token>` (or httpOnly `token
 | GET | `/api/analytics/summary` | Yes | Total spend, count, top category |
 | GET | `/api/analytics/by-category` | Yes | Spend per category |
 | GET | `/api/analytics/over-time` | Yes | Totals over time (`?groupBy=day\|week\|month`) |
+| POST | `/api/ai/suggest-category` | Yes | Suggest category from expense description |
+| POST | `/api/ai/spending-insights` | Yes | Generate plain-English spending summary |
 | GET | `/api/health` | No | `{ "status": "ok" }` |
 
 ## Project structure
@@ -164,9 +215,11 @@ week2-zjerome2023/
 ├── server/                 # Express API
 │   ├── config/             # MongoDB connection
 │   ├── controllers/        # Route handlers
-│   ├── middleware/         # Auth, validation, errors
+│   ├── middleware/         # Auth, validation, errors, AI rate limit
 │   ├── models/             # User, Category, Transaction
-│   └── routes/             # API route definitions
+│   ├── routes/             # API route definitions
+│   ├── services/           # aiService (Gemini client)
+│   └── utils/              # Analytics, AI prompts, cache
 ├── docs/                   # Design, architecture, usage, deployment
 ├── .github/workflows/      # CI/CD pipeline
 ├── PLAN.md                 # Project plan and requirements
@@ -183,6 +236,7 @@ week2-zjerome2023/
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design, request and auth flows |
 | [docs/USAGE.md](docs/USAGE.md) | User guide: register, CRUD, charts |
 | [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | Atlas, Render, Netlify, CI/CD deploy flow |
+| [docs/COST_ANALYSIS.md](docs/COST_ANALYSIS.md) | AI token/cost estimates, Postman/curl examples |
 | [docs/VERIFICATION.md](docs/VERIFICATION.md) | Deployment smoke-test checklist and results |
 
 ## CI/CD
