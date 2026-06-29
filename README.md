@@ -4,7 +4,7 @@ A full-stack expense tracking web app that helps you log daily spending, organiz
 
 **Live demo:** [https://budgetcash.netlify.app](https://budgetcash.netlify.app)
 
-**Youtube Demo Link:** [https://youtu.be/p4nDjpiis7s](https://youtu.be/p4nDjpiis7s)
+**Youtube Demo Link:** [https://youtu.be/2Y0feFMNKyI?si=ZS1DZXQBaQU7mcRA](https://youtu.be/2Y0feFMNKyI?si=ZS1DZXQBaQU7mcRA)
 
 Deployment verified — see [docs/VERIFICATION.md](docs/VERIFICATION.md) for smoke-test checklist and results.
 
