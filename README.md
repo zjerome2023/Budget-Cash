@@ -1,5 +1,13 @@
 # Budget Tracker
 
+**Author:** Zeporah Jerome
+
+**Z-Number:** Z23736385 
+
+**Email:** zjerome2023@fau.edu
+
+## About
+
 A full-stack expense tracking web app that helps you log daily spending, organize it by category, and understand habits through a visual dashboard.
 
 **Live demo:** [https://budgetcash.netlify.app](https://budgetcash.netlify.app)
